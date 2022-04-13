@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strconv"
 
 	CloudType "github.com/sshintaku/cloud_types"
@@ -27,6 +28,32 @@ func (s *Session) CreateSession() {
 	if baseUrlError != nil {
 		log.Fatal(baseUrlError)
 	}
+}
+
+func Find(slice []string, val string) bool {
+	for _, item := range slice {
+		if item == val {
+			return true
+		}
+	}
+	return false
+}
+
+func GetMaintainerList(listToProcess []CloudType.ComplianceObject) []string {
+	var maintainerList []string
+	for _, item := range listToProcess {
+		for _, label := range item.Labels {
+			match, _ := regexp.MatchString("^maintainer:", label)
+			if match {
+				if !Find(maintainerList, label) {
+					maintainerList = append(maintainerList, label)
+				}
+			}
+		}
+	}
+	nullMaintainer := ""
+	maintainerList = append(maintainerList, nullMaintainer)
+	return maintainerList
 }
 
 func (s *Session) GetSampleDeployedImages() []CloudType.ComplianceObject {
@@ -147,3 +174,4 @@ func (s *Session) GetImageCVEInfo(cve string) []CloudType.ImageInfo {
 	}
 	return list
 }
+
