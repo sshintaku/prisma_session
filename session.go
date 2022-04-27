@@ -13,14 +13,19 @@ import (
 )
 
 type Session struct {
-	Token   string
-	BaseUrl string
+	Token     string
+	BaseUrl   string
+	ImageData *[]CloudType.ComplianceObject
 }
 
 func (s *Session) CreateSession() {
 	username := os.Getenv("APIKEY")
 	password := os.Getenv("PASSWORD")
-	authResponse, _ := web_requests.GetJWTToken("https://api2.prismacloud.io/login", username, password)
+	authResponse, authError := web_requests.GetJWTToken("https://api2.prismacloud.io/login", username, password)
+	if authError != nil {
+		fmt.Println("Error with authorization session creation.")
+		log.Fatal(authError)
+	}
 	s.Token = authResponse.Token
 
 	computeUrl, baseUrlError := web_requests.GetComputeBaseUrl(s.Token)
@@ -39,11 +44,11 @@ func Find(slice []string, val string) bool {
 	return false
 }
 
-func GetMaintainerList(listToProcess []CloudType.ComplianceObject) []string {
+func (s *Session) GetMaintainerList(regExpression string, listToProcess []CloudType.ComplianceObject) []string {
 	var maintainerList []string
 	for _, item := range listToProcess {
 		for _, label := range item.Labels {
-			match, _ := regexp.MatchString("^maintainer:", label)
+			match, _ := regexp.MatchString(regExpression, label)
 			if match {
 				if !Find(maintainerList, label) {
 					maintainerList = append(maintainerList, label)
@@ -127,18 +132,12 @@ func (s *Session) GetDeployedImages() []CloudType.ComplianceObject {
 		} else {
 			var jsonObject []CloudType.ComplianceObject
 			json.Unmarshal(results, &jsonObject)
-			for _, data := range jsonObject {
-				if data.RepoTags.Repo == "demand-impact-baseline-event-service-release-green" {
-					fmt.Println("Found it.")
-				}
-
-			}
 			offsetValue = offsetValue + 50
 			complianceList = append(complianceList, jsonObject...)
 		}
 	}
-	return complianceList
 
+	return complianceList
 }
 
 func (s *Session) GetImageCVEInfo(cve string) []CloudType.ImageInfo {
@@ -175,3 +174,16 @@ func (s *Session) GetImageCVEInfo(cve string) []CloudType.ImageInfo {
 	return list
 }
 
+func (s *Session) GetMaintainerImages(regExString string, imageData []CloudType.ComplianceObject) []CloudType.ComplianceObject {
+	var list []CloudType.ComplianceObject
+	for _, data := range imageData {
+		for _, label := range data.Labels {
+
+			match, _ := regexp.MatchString(regExString, label)
+			if match {
+				list = append(list, data)
+			}
+		}
+	}
+	return list
+}
