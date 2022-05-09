@@ -13,15 +13,23 @@ import (
 )
 
 type Session struct {
-	Token     string
-	BaseUrl   string
-	ImageData *[]CloudType.ComplianceObject
+	Token          string
+	ComputeBaseUrl string
+	ImageData      *[]CloudType.ComplianceObject
+	ApiUrl         string
 }
 
-func (s *Session) CreateSession() {
+func (s *Session) CreateSession(baseUrl string) {
 	username := os.Getenv("APIKEY")
+	if username == "" {
+		log.Fatalln("APIKEY environment variable is not set.")
+	}
 	password := os.Getenv("PASSWORD")
-	authResponse, authError := web_requests.GetJWTToken("https://api2.prismacloud.io/login", username, password)
+	if password == "" {
+		log.Fatalln("PASSWORD environment variable is not set.")
+	}
+	s.ApiUrl = baseUrl
+	authResponse, authError := web_requests.GetJWTToken(s.ApiUrl+"login", username, password)
 	if authError != nil {
 		fmt.Println("Error with authorization session creation.")
 		log.Fatal(authError)
@@ -29,7 +37,7 @@ func (s *Session) CreateSession() {
 	s.Token = authResponse.Token
 
 	computeUrl, baseUrlError := web_requests.GetComputeBaseUrl(s.Token)
-	s.BaseUrl = computeUrl
+	s.ComputeBaseUrl = computeUrl
 	if baseUrlError != nil {
 		log.Fatal(baseUrlError)
 	}
@@ -64,7 +72,7 @@ func (s *Session) GetMaintainerList(regExpression string, listToProcess []CloudT
 func (s *Session) GetSampleDeployedImages() []CloudType.ComplianceObject {
 	var jsonObject []CloudType.ComplianceObject
 	var complianceList []CloudType.ComplianceObject
-	uri := s.BaseUrl + "/api/v1/images?limit=5"
+	uri := s.ComputeBaseUrl + "/api/v1/images?limit=5"
 	results, resultError := web_requests.GetMethod(uri, s.Token)
 	if resultError != nil {
 		log.Fatal(resultError)
@@ -80,7 +88,7 @@ func (s *Session) GetSamepleContainers() []CloudType.ContainerInfo {
 	var jsonObject []CloudType.ContainerInfo
 	var complianceList []CloudType.ContainerInfo
 
-	uri := s.BaseUrl + "/api/v1/containers?limit=10"
+	uri := s.ComputeBaseUrl + "/api/v1/containers?limit=10"
 	results, resultError := web_requests.GetMethod(uri, s.Token)
 	if resultError != nil {
 		log.Fatal(resultError)
@@ -99,7 +107,7 @@ func (s *Session) GetAllContainers() []CloudType.ContainerInfo {
 	var complianceList []CloudType.ContainerInfo
 
 	for flag {
-		uri := s.BaseUrl + "/api/v1/containers?limit=50&offset=" + strconv.Itoa(offsetValue)
+		uri := s.ComputeBaseUrl + "/api/v1/containers?limit=50&offset=" + strconv.Itoa(offsetValue)
 		results, resultError := web_requests.GetMethod(uri, s.Token)
 		if resultError != nil {
 			log.Fatal(resultError)
@@ -122,7 +130,7 @@ func (s *Session) GetDeployedImages() []CloudType.ComplianceObject {
 	var complianceList []CloudType.ComplianceObject
 
 	for flag {
-		uri := s.BaseUrl + "/api/v1/images?limit=50&offset=" + strconv.Itoa(offsetValue)
+		uri := s.ComputeBaseUrl + "/api/v1/images?limit=50&offset=" + strconv.Itoa(offsetValue)
 		results, resultError := web_requests.GetMethod(uri, s.Token)
 		if resultError != nil {
 			log.Fatal(resultError)
@@ -141,7 +149,7 @@ func (s *Session) GetDeployedImages() []CloudType.ComplianceObject {
 }
 
 func (s *Session) GetImageCVEInfo(cve string) []CloudType.ImageInfo {
-	uri := s.BaseUrl + "/api/v1/stats/vulnerabilities/impacted-resources?cve=" + cve
+	uri := s.ComputeBaseUrl + "/api/v1/stats/vulnerabilities/impacted-resources?cve=" + cve
 	results, resultError := web_requests.GetMethod(uri, s.Token)
 	if resultError != nil {
 		log.Fatal(resultError)
