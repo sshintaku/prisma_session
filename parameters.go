@@ -15,6 +15,11 @@ type Parameters struct {
 	ApiUrl               string
 	IgnoreAudits         []string
 	AlertQueryParameters CloudType.AlertQuery
+	CWPQueryFilters      cwpFilter `json:"cwp_query.filters"`
+}
+
+type cwpFilter struct {
+	Collections []string
 }
 
 func ReadParameters() Parameters {
