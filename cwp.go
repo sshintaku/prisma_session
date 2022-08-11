@@ -2,6 +2,8 @@ package prisma_session
 
 import (
 	"fmt"
+	"strconv"
+	"time"
 
 	CloudType "github.com/sshintaku/cloud_types"
 )
@@ -29,35 +31,44 @@ func inList(list []string, collectionName string) bool {
 	return false
 }
 
-func GetDataByCollection(collectionname string, data []CloudType.ComplianceObject) {
-	var list []CloudType.ComplianceObject
-	for _, item := range data {
-		result := isInCollection(collectionname, item.Collections)
-		if result {
-			list = append(list, item)
-		}
-	}
-
-	var critical, high, important, medium, low int
-	for _, item := range list {
-
-		for _, vulnerability := range item.VulnerabilityIssues {
-			switch vulnerability.Severity {
-			case "critical":
-				critical++
-			case "high":
-				high++
-			case "important":
-				important++
-			case "medium":
-				medium++
-			case "low":
-				low++
+func GetDataByCollection(collectionnames []string, data []CloudType.ComplianceObject) {
+	report := "Collection Name, Time Stamp, No. of Critical, No. of High, No. of Important, No. of Medium, No. of Low"
+	fmt.Println(report)
+	for _, collectionName := range collectionnames {
+		var list []CloudType.ComplianceObject
+		for _, item := range data {
+			result := isInCollection(collectionName, item.Collections)
+			if result {
+				list = append(list, item)
 			}
 		}
+		var critical, high, important, medium, low int
+		for _, item := range list {
 
+			for _, vulnerability := range item.VulnerabilityIssues {
+				switch vulnerability.Severity {
+				case "critical":
+					critical++
+				case "high":
+					high++
+				case "important":
+					important++
+				case "medium":
+					medium++
+				case "low":
+					low++
+				}
+			}
+
+		}
+		if list != nil {
+			fmt.Printf("%s,%s,%s, %s,%s, %s, %s\n", collectionName, time.Now(), strconv.Itoa(critical), strconv.Itoa(high), strconv.Itoa(important), strconv.Itoa(medium), strconv.Itoa(low))
+		} else {
+			fmt.Printf("%s,%s", collectionName, "N/A\n")
+		}
 	}
-	fmt.Println("For collection: " + collectionname)
+
+	//fmt.Println("For collection: " + collectionname)
 }
 
 func isInCollection(collectionName string, collectionArray []string) bool {
@@ -66,5 +77,5 @@ func isInCollection(collectionName string, collectionArray []string) bool {
 			return true
 		}
 	}
-	return true
+	return false
 }
