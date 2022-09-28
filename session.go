@@ -245,6 +245,7 @@ func (s *Session) GetCSPMAlerts(payload CloudType.AlertQuery) ([]CloudType.Alert
 	}
 	return result, nil
 }
+
 func (s *Session) GetRuntimeAudits(excludeAlarms []string) []CloudType.AuditType {
 	var list []CloudType.AuditType
 	flag := true
@@ -310,6 +311,30 @@ func (s *Session) GetMaintainerImages(regExString string, imageData []CloudType.
 			match, _ := regexp.MatchString(regExString, label)
 			if match {
 				list = append(list, data)
+			}
+		}
+	}
+	return list
+}
+
+func (s *Session) GetAuditEvents(apiString string) []CloudType.AuditApiType {
+	var list []CloudType.AuditApiType
+	flag := true
+	offsetValue := 0
+	for flag {
+		uri := s.ComputeBaseUrl + "/api/v1/audits/mgmt?limit=50&offset=" + strconv.Itoa(offsetValue)
+		results, resultError := web_requests.GetMethod(uri, s.Token)
+		if resultError != nil {
+			log.Fatal(resultError)
+		}
+		if string(results) == "null" || string(results) == "" {
+			flag = false
+		} else {
+			var jsonObject []CloudType.AuditApiType
+			json.Unmarshal(results, &jsonObject)
+			offsetValue = offsetValue + 50
+			for _, item := range jsonObject {
+				list = append(list, item)
 			}
 		}
 	}

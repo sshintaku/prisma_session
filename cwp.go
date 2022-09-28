@@ -1,11 +1,14 @@
 package prisma_session
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
 	CloudType "github.com/sshintaku/cloud_types"
+	"github.com/sshintaku/web_requests"
 )
 
 func (s *Session) GetCollectionList(data []CloudType.ComplianceObject) []string {
@@ -19,6 +22,29 @@ func (s *Session) GetCollectionList(data []CloudType.ComplianceObject) []string 
 		}
 	}
 	return list
+
+}
+
+func (s *Session) GetAllIncidents() {
+	flag := true
+	offsetValue := 0
+	var complianceList []CloudType.ComplianceObject
+
+	for flag {
+		uri := s.ComputeBaseUrl + "/api/v22.06/audits/incidents?limit=50&offset=" + strconv.Itoa(offsetValue)
+		results, resultError := web_requests.GetMethod(uri, s.Token)
+		if resultError != nil {
+			log.Fatal(resultError)
+		}
+		if string(results) == "null" {
+			flag = false
+		} else {
+			var jsonObject []CloudType.ComplianceObject
+			json.Unmarshal(results, &jsonObject)
+			offsetValue = offsetValue + 50
+			complianceList = append(complianceList, jsonObject...)
+		}
+	}
 
 }
 
@@ -78,4 +104,46 @@ func isInCollection(collectionName string, collectionArray []string) bool {
 		}
 	}
 	return false
+}
+
+func (s *Session) GetAllRegistryNames() []string {
+
+	flag := true
+	offsetValue := 0
+	var list []string
+	for flag {
+		uri := s.ComputeBaseUrl + "/api/v22.06/registry/names?limit=50&offset=" + strconv.Itoa(offsetValue)
+		results, resultError := web_requests.GetMethod(uri, s.Token)
+		if resultError != nil {
+			log.Fatal(resultError)
+		}
+		if string(results) == "null" {
+			flag = false
+		} else {
+			var jsonObject []string
+			json.Unmarshal(results, &jsonObject)
+			offsetValue = offsetValue + 50
+			list = append(list, jsonObject...)
+		}
+	}
+	return list
+}
+
+func (s *Session) GetOneRegistryName() []string {
+
+	offsetValue := 0
+	var list []string
+
+	uri := s.ComputeBaseUrl + "/api/v22.06/registry/names?limit=1&offset=" + strconv.Itoa(offsetValue)
+	results, resultError := web_requests.GetMethod(uri, s.Token)
+	if resultError != nil {
+		log.Fatal(resultError)
+	}
+
+	var jsonObject []string
+	json.Unmarshal(results, &jsonObject)
+	offsetValue = offsetValue + 50
+	list = append(list, jsonObject...)
+
+	return list
 }
