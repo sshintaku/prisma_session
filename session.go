@@ -317,26 +317,22 @@ func (s *Session) GetMaintainerImages(regExString string, imageData []CloudType.
 	return list
 }
 
-func (s *Session) GetAuditEvents(apiString string) []CloudType.AuditApiType {
+func (s *Session) GetAuditEvents() {
 	var list []CloudType.AuditApiType
-	flag := true
-	offsetValue := 0
-	for flag {
-		uri := s.ComputeBaseUrl + "/api/v1/audits/mgmt?limit=50&offset=" + strconv.Itoa(offsetValue)
-		results, resultError := web_requests.GetMethod(uri, s.Token)
-		if resultError != nil {
-			log.Fatal(resultError)
-		}
-		if string(results) == "null" || string(results) == "" {
-			flag = false
-		} else {
-			var jsonObject []CloudType.AuditApiType
-			json.Unmarshal(results, &jsonObject)
-			offsetValue = offsetValue + 50
-			for _, item := range jsonObject {
-				list = append(list, item)
-			}
-		}
+
+	uri := s.ComputeBaseUrl + "/api/v1/audits/mgmt?project=Central%20Console&search=%252Fapi%252Fv1%252Fpolicies%252Ffirewall%252Fnetwork"
+	//uri := s.ComputeBaseUrl + "/api/v1/audits/mgmt?limit=50&offset=" + strconv.Itoa(offsetValue)
+	results, resultError := web_requests.GetMethod(uri, s.Token)
+	if resultError != nil {
+		log.Fatalln(resultError)
 	}
-	return list
+
+	var jsonObject []CloudType.AuditApiType
+	json.Unmarshal(results, &jsonObject)
+
+	list = append(list, jsonObject...)
+	for _, item := range list {
+		fmt.Println(item.Diff)
+	}
+
 }
