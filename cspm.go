@@ -89,3 +89,18 @@ func (s *Session) DescribeEC2Instances(parameters Parameters) map[string]string 
 	}
 	return dict
 }
+
+func (s *Session) RepoOnboaarding(repo CloudType.RepoProperties) {
+	uri := s.ApiUrl + "code/api/v1/repositories"
+	payload, payloadError := json.Marshal(repo)
+	if payloadError != nil {
+		log.Fatalln(payloadError)
+	}
+
+	result, resultError := web_requests.PostMethod(uri, payload, s.Token)
+	if resultError != nil {
+		log.Fatalln(resultError)
+	}
+	fmt.Println(result)
+
+}
