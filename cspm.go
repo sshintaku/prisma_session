@@ -90,7 +90,7 @@ func (s *Session) DescribeEC2Instances(parameters Parameters) map[string]string 
 	return dict
 }
 
-func (s *Session) RepoOnboaarding(repo CloudType.RepoProperties) {
+func (s *Session) RepoOnboarding(repo CloudType.RepoProperties) {
 	uri := s.ApiUrl + "code/api/v1/repositories"
 	payload, payloadError := json.Marshal(repo)
 	if payloadError != nil {
