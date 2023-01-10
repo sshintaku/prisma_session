@@ -99,31 +99,30 @@ func (s *Session) GetSampleDeployedImages() []CloudType.ComplianceObject {
 	return complianceList
 }
 
-func (s *Session) GetSampleContainers() []CloudType.ContainerInfo {
+func (s *Session) GetSampleContainers() []CloudType.ContainerResult {
 
-	var jsonObject []CloudType.ContainerInfo
-	var complianceList []CloudType.ContainerInfo
+	var jsonObject []CloudType.ContainerResult
+	var complianceList []CloudType.ContainerResult
 
-	uri := s.ComputeBaseUrl + "/api/v1/containers?limit=10"
+	uri := s.ComputeBaseUrl + "/api/v22.06/containers?limit=10"
 	results, resultError := web_requests.GetMethod(uri, s.Token)
 	if resultError != nil {
 		log.Fatal(resultError)
 	}
-	fmt.Println(string(results))
 	json.Unmarshal(results, &jsonObject)
 	complianceList = append(complianceList, jsonObject...)
 
 	return complianceList
 }
 
-func (s *Session) GetAllContainers() []CloudType.ContainerInfo {
+func (s *Session) GetAllContainers() []CloudType.ContainerResult {
 	flag := true
 	offsetValue := 0
-	var jsonObject []CloudType.ContainerInfo
-	var complianceList []CloudType.ContainerInfo
+	var jsonObject []CloudType.ContainerResult
+	var complianceList []CloudType.ContainerResult
 
 	for flag {
-		uri := s.ComputeBaseUrl + "/api/v1/containers?limit=50&offset=" + strconv.Itoa(offsetValue)
+		uri := s.ComputeBaseUrl + "/api/v22.06/containers?limit=50&offset=" + strconv.Itoa(offsetValue)
 		results, resultError := web_requests.GetMethod(uri, s.Token)
 		if resultError != nil {
 			log.Fatal(resultError)
@@ -133,7 +132,6 @@ func (s *Session) GetAllContainers() []CloudType.ContainerInfo {
 		} else {
 			json.Unmarshal(results, &jsonObject)
 			offsetValue = offsetValue + 50
-			fmt.Println(string(results))
 			complianceList = append(complianceList, jsonObject...)
 		}
 	}
@@ -335,4 +333,69 @@ func (s *Session) GetAuditEvents() {
 		fmt.Println(item.Diff)
 	}
 
+}
+
+func (s *Session) GetCredentials() string {
+	uri := s.ComputeBaseUrl + "/api/v22.06/credentials"
+	results, resultError := web_requests.GetMethod(uri, s.Token)
+	if resultError != nil {
+		fmt.Println(resultError)
+	}
+	return string(results)
+
+}
+
+func (s *Session) GetDefenderDownload() string {
+	uri := s.ComputeBaseUrl + "/api/v22.06/defenders/download"
+	results, resultError := web_requests.GetMethod(uri, s.Token)
+	if resultError != nil {
+		fmt.Println(resultError)
+	}
+	return string(results)
+}
+
+func (s *Session) GetCloudDiscoveryDownload() string {
+	uri := s.ComputeBaseUrl + "/api/v22.06/cloud/discovery/download"
+	results, resultError := web_requests.GetMethod(uri, s.Token)
+	if resultError != nil {
+		fmt.Println(resultError)
+	}
+	return string(results)
+}
+
+func (s *Session) GetCloudDiscovery(serviceType string, min int, max int) []CloudType.DiscoveryResult {
+	var list []CloudType.DiscoveryResult
+	flag := true
+	offsetValue := min
+	for flag {
+		uri := s.ComputeBaseUrl + "/api/v22.06/cloud/discovery?limit=50&offset=" + strconv.Itoa(offsetValue)
+		results, resultError := web_requests.GetMethod(uri, s.Token)
+		if resultError != nil {
+			fmt.Println(resultError)
+		}
+		if string(results) == "null" || string(results) == "" || offsetValue >= max {
+			flag = false
+		} else {
+			var jsonObject []CloudType.DiscoveryResult
+			json.Unmarshal(results, &jsonObject)
+			offsetValue = offsetValue + 50
+			for _, item := range jsonObject {
+				if item.ServiceType == serviceType {
+					list = append(list, item)
+				}
+			}
+
+		}
+	}
+	return list
+
+}
+
+func SliceContains(list []string, item string) bool {
+	for _, element := range list {
+		if element == item {
+			return true
+		}
+	}
+	return false
 }
