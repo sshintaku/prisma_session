@@ -315,6 +315,17 @@ func (s *Session) GetMaintainerImages(regExString string, imageData []CloudType.
 	return list
 }
 
+func (s *Session) GetContainerRuntimeEvents(accountId string) []CloudType.RuntimeAudit {
+	uri := s.ComputeBaseUrl + "/api/v1/audits/runtime/container?accountIds=" + accountId
+	var jsonResults []CloudType.RuntimeAudit
+	results, resultError := web_requests.GetMethod(uri, s.Token)
+	if resultError != nil {
+		log.Fatalln(resultError)
+	}
+	json.Unmarshal(results, &jsonResults)
+	return jsonResults
+}
+
 func (s *Session) GetAuditEvents() {
 	var list []CloudType.AuditApiType
 
@@ -335,13 +346,22 @@ func (s *Session) GetAuditEvents() {
 
 }
 
-func (s *Session) GetCredentials() string {
+func (s *Session) GetCredentials() []CloudType.CloudCreds {
+	var creds []CloudType.CloudCreds
+	var list []CloudType.CloudCreds
 	uri := s.ComputeBaseUrl + "/api/v22.06/credentials"
 	results, resultError := web_requests.GetMethod(uri, s.Token)
 	if resultError != nil {
 		fmt.Println(resultError)
 	}
-	return string(results)
+	//fmt.Println(string(results))
+	json.Unmarshal(results, &creds)
+	for _, item := range creds {
+		if item.Type == "aws" {
+			list = append(list, item)
+		}
+	}
+	return list
 
 }
 
@@ -352,6 +372,19 @@ func (s *Session) GetDefenderDownload() string {
 		fmt.Println(resultError)
 	}
 	return string(results)
+}
+
+func (s *Session) GetCloudDiscoveryItem(list []CloudType.CloudCreds) {
+	for _, item := range list {
+		uri := s.ComputeBaseUrl + "/api/v22.06/cloud/discovery/download?accountIDs=" + item.AccountID
+		results, resultError := web_requests.GetMethod(uri, s.Token)
+		if resultError != nil {
+			fmt.Println(resultError)
+		}
+		fmt.Println("For Account ID: " + item.AccountID)
+		fmt.Println(string(results))
+		fmt.Println()
+	}
 }
 
 func (s *Session) GetCloudDiscoveryDownload() string {
@@ -383,6 +416,37 @@ func (s *Session) GetCloudDiscovery(serviceType string, min int, max int) []Clou
 				if item.ServiceType == serviceType {
 					list = append(list, item)
 				}
+			}
+
+		}
+	}
+	return list
+
+}
+
+func (s *Session) GetAllCloudDiscovery(accountNumber string, min int, max int) []CloudType.DiscoveryResult {
+	var list []CloudType.DiscoveryResult
+	flag := true
+	var jsonObject []CloudType.DiscoveryResult
+	offsetValue := min
+	for flag {
+		uri := s.ComputeBaseUrl + "/api/v22.06/cloud/discovery?accountIDs=" + accountNumber + "&limit=50&offset=" + strconv.Itoa(offsetValue)
+		results, resultError := web_requests.GetMethod(uri, s.Token)
+		if resultError != nil {
+			fmt.Println(resultError)
+		}
+		if string(results) == "null" || string(results) == "" || offsetValue >= max {
+			json.Unmarshal(results, &jsonObject)
+			for _, item := range jsonObject {
+				list = append(list, item)
+			}
+			flag = false
+		} else {
+
+			json.Unmarshal(results, &jsonObject)
+			offsetValue = offsetValue + 50
+			for _, item := range jsonObject {
+				list = append(list, item)
 			}
 
 		}

@@ -52,6 +52,74 @@ func (s *Session) GetHostInfo(rrn CloudType.RRN) {
 	fmt.Println(string(*result))
 }
 
+func (s *Session) RunRQLQuery(query string) string {
+	uri := s.ApiUrl + "search/config"
+	var queryParameters CloudType.Investigate
+	queryParameters.Query = query
+	queryParameters.TimeRange.Type = "relative"
+	queryParameters.TimeRange.Value.Unit = "day"
+	queryParameters.TimeRange.Value.Amount = 7
+	jsonPayload, marshalError := json.Marshal(queryParameters)
+	if marshalError != nil {
+		log.Fatal(marshalError)
+	}
+	response, responseError := web_requests.PostMethod(uri, jsonPayload, s.Token)
+	if responseError != nil {
+		log.Fatalln(responseError)
+	}
+
+	responseBytes := []byte(*response)
+	return string(responseBytes)
+}
+
+func (s *Session) GetAllAssetsByCollection(collectionName string) []string {
+	var fullReport []string
+	uri := s.ApiUrl + "search/config"
+	query := "config from cloud.resource where api.name = 'aws-ec2-describe-instances'"
+	var queryParameters CloudType.Investigate
+	queryParameters.Query = query
+	queryParameters.TimeRange.Type = "relative"
+	queryParameters.TimeRange.Value.Unit = "day"
+	queryParameters.TimeRange.Value.Amount = 7
+	jsonPayload, marshalError := json.Marshal(queryParameters)
+	if marshalError != nil {
+		log.Fatal(marshalError)
+	}
+	response, responseError := web_requests.PostMethod(uri, jsonPayload, s.Token)
+	if responseError != nil {
+		log.Fatalln(responseError)
+	}
+	var rqlResult CloudType.RQLType
+
+	responseBytes := []byte(*response)
+	json.Unmarshal(responseBytes, &rqlResult)
+	header := "Instance ID, Private DNS Name, Public DNS Name, VPC Id, Security Groups, Tags"
+	fullReport = append(fullReport, header)
+
+	for _, rql := range rqlResult.Data.Items {
+
+		ec2 := CloudType.EC2Data{}
+		ec2Data, ec2DataError := json.Marshal(rql.Data)
+		if ec2DataError != nil {
+			log.Fatalln(ec2DataError)
+		}
+		json.Unmarshal(ec2Data, &ec2)
+		report := ec2.InstanceId + ", " + ec2.PrivateDnsName + ", " + ec2.PublicDnsName + ", " + ec2.VpcId + ", "
+		var securityGroupInfo string
+		for _, securityGroups := range ec2.SecuirtyGroups {
+			securityGroupInfo += securityGroups.GroupName + "; "
+		}
+		report += securityGroupInfo + ", "
+		var tagsInfo string
+		for _, tagInfo := range ec2.Tags {
+			tagsInfo += "Key: " + tagInfo.Key + " Value: " + tagInfo.Value + "; "
+		}
+		report += tagsInfo
+		fullReport = append(fullReport, report)
+	}
+	return fullReport
+}
+
 func (s *Session) DescribeEC2Instances(parameters Parameters) map[string]string {
 	uri := s.ApiUrl + "search/config"
 	query := "config from cloud.resource where api.name = 'aws-ec2-describe-instances' AND json.rule = tags[*] contains eks"
@@ -102,5 +170,15 @@ func (s *Session) RepoOnboarding(repo CloudType.RepoProperties) {
 		log.Fatalln(resultError)
 	}
 	fmt.Println(result)
+
+}
+
+func (s *Session) GetAssetsByAccount(cloudAccount string) {
+	uri := s.ApiUrl + "v2/inventory?cloud.account=" + cloudAccount
+	result, resultError := web_requests.GetMethod(uri, s.Token)
+	if resultError != nil {
+		log.Fatalln(resultError)
+	}
+	fmt.Println(string(result))
 
 }
